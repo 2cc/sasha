@@ -22,7 +22,6 @@ load_hosts() {
 
     # Extract hostnames from config
     mapfile -t hosts < <(grep -i '^Host ' "$CONFIG_FILE" | awk '{print $2}' | grep -v '[*?]')
-    hosts+=("Exit")
     filtered_hosts=("${hosts[@]}")
 }
 
@@ -33,7 +32,7 @@ filter_hosts() {
     else
         filtered_hosts=()
         for host in "${hosts[@]}"; do
-            if [[ $host == "Exit" || ${host,,} == *${search_query,,}* ]]; then
+            if [[ ${host,,} == *${search_query,,}* ]]; then
                 filtered_hosts+=("$host")
             fi
         done
@@ -63,13 +62,8 @@ draw_menu() {
 # Connect to selected host
 connect_to_host() {
     local host=${filtered_hosts[$selected]}
-    if [[ $host == "Exit" ]]; then
-        printf "${RED}Exiting...${NC}\n"
-        return 1
-    else
         printf "${GREEN}Connecting to $host...${NC}\n"
         ssh "$host"
-    fi
 }
 
 # Main loop
@@ -94,9 +88,7 @@ main() {
                 ;;
             "") # Enter key
                 clear
-                if ! connect_to_host; then
-                    break
-                fi
+                connect_to_host
                 read -rp "Press Enter to return to menu."
                 clear
                 ;;
