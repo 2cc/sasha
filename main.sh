@@ -45,7 +45,20 @@ filter_hosts() {
 draw_menu() {
     clear
     printf "${CYAN}==== SSH Host Menu ====${NC}\n"
-    printf "${CYAN}Search: ${YELLOW}$search_query${NC}\n"
+
+    # Получаем ширину терминала
+    local term_width=$(tput cols)
+
+    # Создаем рамку для поля поиска
+    local border_line=$(printf "%-$((term_width - 4))s" "" | sed 's/ /─/g')  # Уменьшаем на 4 для двух символов рамки по бокам
+    printf "${CYAN}┌%s┐${NC}\n" "$border_line"  # Верхняя граница с символами
+
+    # Заполняем пробелы между "Search:" и правой рамкой
+    local search_padding=$((term_width - 14 - ${#search_query}))  # 12 - длина "Search: "
+    printf "${CYAN}│ Search: ${YELLOW}%s%*s${CYAN} │\n" "$search_query" "$search_padding" ""  # Выводим строку поиска с рамкой
+    printf "${CYAN}└%s┘${NC}\n" "$border_line"  # Нижняя граница с символами
+
+    # Выводим список хостов
     for i in "${!filtered_hosts[@]}"; do
         if [[ $i -eq $selected ]]; then
             printf "${YELLOW}--> ${filtered_hosts[$i]}${NC}\n"
@@ -58,7 +71,7 @@ draw_menu() {
     
     # Move cursor to the end of the search query
     local search_line_length=${#search_query}
-    tput cup 1 $((8 + search_line_length)) # Позиционируем курсор за текстом поиска
+    tput cup 2 $((10 + search_line_length)) # Позиционируем курсор за текстом поиска
 }
 
 # Connect to selected host
