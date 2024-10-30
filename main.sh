@@ -54,16 +54,18 @@ draw_menu() {
         fi
     done
 
-    # Move cursor to the bottom of the screen for the prompt
-    tput cup "$(tput lines)" 0
-    printf "${CYAN}Use arrow keys to navigate, type to search, Enter to select${NC}\n"
+    printf "${CYAN}Use arrow keys to navigate, type to search, Enter to select, Ctrl+C to exit.${NC}\n"
+    
+    # Move cursor to the end of the search query
+    local search_line_length=${#search_query}
+    tput cup 1 $((8 + search_line_length)) # Позиционируем курсор за текстом поиска
 }
 
 # Connect to selected host
 connect_to_host() {
     local host=${filtered_hosts[$selected]}
-        printf "${GREEN}Connecting to $host...${NC}\n"
-        ssh "$host"
+    printf "${GREEN}Connecting to $host...${NC}\n"
+    ssh "$host"
 }
 
 # Main loop
