@@ -10,6 +10,15 @@ hosts=()
 filtered_hosts=()
 search_query=""
 
+# Function to clear the terminal and exit gracefully
+cleanup() {
+    tput clear
+    exit 0
+}
+
+# Trap Ctrl+C (SIGINT) to call cleanup function
+trap cleanup SIGINT
+
 # Load hosts from SSH config file
 load_hosts() {
     if [[ ! -f $CONFIG_FILE ]]; then
@@ -49,8 +58,6 @@ calculate_padding() {
 # Draw the menu with highlighted selection and search query
 draw_menu() {
     clear
-    # printf "${BORDER_COLOR}==== SSH Host Menu ====${COLOR_RESET}\n"
-
     # Получаем ширину терминала
     local term_width=$(tput cols)
 
