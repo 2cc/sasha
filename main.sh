@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source themes/base_theme
+source "$(dirname "$0")/themes/base_theme"
 
 COLOR_RESET='\033[0m'
 CONFIG_FILE="$HOME/.ssh/config"
