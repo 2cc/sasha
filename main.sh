@@ -4,7 +4,6 @@ source themes/base_theme
 
 COLOR_RESET='\033[0m'
 CONFIG_FILE="$HOME/.ssh/config"
-LOG_FILE="ssh_menu_key_log.txt"
 
 selected=0
 hosts=()
@@ -93,10 +92,10 @@ main() {
         case $key in
             $'\x1b')
                 read -rsn2 -t 0.1 key
-                if [[ $key == "[A" ]]; then
+                if [[ $key == "[A" || $key == "OA" ]]; then
                     ((selected--))
                     ((selected < 0)) && selected=$((${#filtered_hosts[@]} - 1))
-                elif [[ $key == "[B" ]]; then
+                elif [[ $key == "[B" || $key == "OB" ]]; then
                     ((selected++))
                     ((selected >= ${#filtered_hosts[@]})) && selected=0
                 fi
