@@ -3,35 +3,31 @@
 source themes/base_theme
 
 COLOR_RESET='\033[0m'
-
 CONFIG_FILE="$HOME/.ssh/config"
+LOG_FILE="ssh_menu_key_log.txt"
+
 selected=0
 hosts=()
 filtered_hosts=()
 search_query=""
 
-# Function to clear the terminal and exit gracefully
 cleanup() {
     tput clear
     exit 0
 }
 
-# Trap Ctrl+C (SIGINT) to call cleanup function
 trap cleanup SIGINT
 
-# Load hosts from SSH config file
 load_hosts() {
     if [[ ! -f $CONFIG_FILE ]]; then
         printf "${ERROR_COLOR}Error: SSH config file not found at $CONFIG_FILE${COLOR_RESET}\n" >&2
         exit 1
     fi
 
-    # Extract hostnames from config
     mapfile -t hosts < <(grep -i '^Host ' "$CONFIG_FILE" | awk '{print $2}' | grep -v '[*?]')
     filtered_hosts=("${hosts[@]}")
 }
 
-# Filter hosts based on search query
 filter_hosts() {
     if [[ -z $search_query ]]; then
         filtered_hosts=("${hosts[@]}")
@@ -43,96 +39,78 @@ filter_hosts() {
             fi
         done
     fi
-    # Reset selection if filtered list is shorter
     ((selected >= ${#filtered_hosts[@]})) && selected=0
 }
 
-# Function to calculate padding based on terminal width, text length and label length
 calculate_padding() {
     local term_width=$1
     local text_length=$2
     local label_length=$3
-    echo $((term_width - 4 - text_length - label_length))  # -4 для учета рамки
+    echo $((term_width - 4 - text_length - label_length))
 }
 
-# Draw the menu with highlighted selection and search query
 draw_menu() {
     clear
-    # Получаем ширину терминала
     local term_width=$(tput cols)
+    local border_line=$(printf "%-$((term_width - 2))s" "" | sed 's/ /─/g')
+    printf "${BORDER_COLOR}┌%s┐${COLOR_RESET}\n" "$border_line"
 
-    # Создаем рамку для поля поиска
-    local border_line=$(printf "%-$((term_width - 2))s" "" | sed 's/ /─/g')  # Уменьшаем на 2 для двух символов рамки по бокам
-    printf "${BORDER_COLOR}┌%s┐${COLOR_RESET}\n" "$border_line"  # Верхняя граница с символами
-
-    # Заполняем пробелы между "Search:" и правой рамкой
     local search_label="Search: "
     local search_padding=$(calculate_padding $term_width ${#search_query} ${#search_label})
-    printf "${BORDER_COLOR}│ %s${SEARCH_FG}%s%*s ${BORDER_COLOR}│\n" "$search_label" "$search_query" "$search_padding" ""  # Выводим строку поиска с рамкой
-    printf "${BORDER_COLOR}└%s┘${COLOR_RESET}\n" "$border_line"  # Нижняя граница с символами
+    printf "${BORDER_COLOR}│ %s${SEARCH_FG}%s%*s ${BORDER_COLOR}│\n" "$search_label" "$search_query" "$search_padding" ""
+    printf "${BORDER_COLOR}└%s┘${COLOR_RESET}\n" "$border_line"
 
-    # Создаем рамку для списка хостов
-    printf "${BORDER_COLOR}┌%s┐${COLOR_RESET}\n" "$border_line"  # Верхняя граница списка хостов
+    printf "${BORDER_COLOR}┌%s┐${COLOR_RESET}\n" "$border_line"
 
-    # Выводим список хостов
     for i in "${!filtered_hosts[@]}"; do
-        local host_padding=$(calculate_padding $term_width ${#filtered_hosts[$i]} 3)  # Для хостов длина метки равна 0
-        
-        # Подсветка выбранного элемента (инвертированные цвета)
+        local host_padding=$(calculate_padding $term_width ${#filtered_hosts[$i]} 3)
         if [[ $i -eq $selected ]]; then
-            printf "${COLOR_RESET}${BORDER_COLOR}│${SELECTED_FG}${SELECTED_BG}    %s%*s ${COLOR_RESET}${BORDER_COLOR}│\n" "${filtered_hosts[$i]}" "$host_padding" ""  # Выводим выбранный хост с инвертированными цветами
+            printf "${COLOR_RESET}${BORDER_COLOR}│${SELECTED_FG}${SELECTED_BG}    %s%*s ${COLOR_RESET}${BORDER_COLOR}│\n" "${filtered_hosts[$i]}" "$host_padding" ""
         else
-            printf "${COLOR_RESET}${BORDER_COLOR}│    %s%*s${BORDER_COLOR} │\n" "${filtered_hosts[$i]}" "$host_padding" ""  # Выводим строку хоста с рамкой
+            printf "${COLOR_RESET}${BORDER_COLOR}│    %s%*s${BORDER_COLOR} │\n" "${filtered_hosts[$i]}" "$host_padding" ""
         fi
     done
 
-    printf "${BORDER_COLOR}└%s┘${COLOR_RESET}\n" "$border_line"  # Нижняя граница с символами
-
+    printf "${BORDER_COLOR}└%s┘${COLOR_RESET}\n" "$border_line"
     printf "${BORDER_COLOR}Use arrow keys to navigate, type to search, Enter to select, Ctrl+C to exit.${COLOR_RESET}\n"
-    
-    # Move cursor to the end of the search query
     local search_line_length=${#search_query}
-    tput cup 1 $((10 + search_line_length)) # Позиционируем курсор за текстом поиска
+    tput cup 1 $((10 + search_line_length))
 }
 
-# Connect to selected host
 connect_to_host() {
     local host=${filtered_hosts[$selected]}
     printf "${SUCCESS_COLOR}Connecting to $host...${COLOR_RESET}\n"
     ssh "$host"
 }
 
-# Main loop
 main() {
     load_hosts
     while true; do
         filter_hosts
         draw_menu
 
-        # Capture user key presses
         read -rsn1 key
         case $key in
-            $'\x1b') # Handle arrow keys
+            $'\x1b')
                 read -rsn2 -t 0.1 key
-                if [[ $key == "[A" ]]; then # Up arrow
+                if [[ $key == "[A" ]]; then
                     ((selected--))
                     ((selected < 0)) && selected=$((${#filtered_hosts[@]} - 1))
-                elif [[ $key == "[B" ]]; then # Down arrow
+                elif [[ $key == "[B" ]]; then
                     ((selected++))
                     ((selected >= ${#filtered_hosts[@]})) && selected=0
                 fi
                 ;;
-            "") # Enter key
+            "")
                 clear
                 connect_to_host
-                read -rp "Press Enter to return to menu."
                 clear
                 ;;
-            [[:print:]]) # Capture printable characters for search
+            [[:print:]])
                 search_query+="$key"
                 selected=0
                 ;;
-            $'\177') # Handle backspace
+            $'\177')
                 search_query="${search_query:0:-1}"
                 selected=0
                 ;;
